@@ -1,8 +1,57 @@
 const express = require('express');
 const router = express.Router();
 const { SECRET, statsRecorder, statsQuery, aiSummary } = require('../index');
-// 导入adminRoutes的认证中间件
-const { authenticateToken } = require('./adminRoutes');
+
+// ==================== 辅助函数 ====================
+
+/**
+ * 将环境变量字符串转换为布尔值
+ * @param {string|boolean|undefined} value - 环境变量值
+ * @param {boolean} defaultValue - 默认值
+ * @returns {boolean} 布尔值
+ */
+function parseBoolean(value, defaultValue = false) {
+    // 如果值为 undefined、null 或空字符串，返回默认值
+    if (value === undefined || value === null || value === '') {
+        return defaultValue;
+    }
+
+    // 如果已经是布尔值，直接返回
+    if (typeof value === 'boolean') {
+        return value;
+    }
+
+    // 如果是字符串，转换为小写后判断
+    if (typeof value === 'string') {
+        const str = value.toLowerCase().trim();
+        return str === 'true' || str === '1' || str === 'yes' || str === 'on';
+    }
+
+    // 如果是数字，非0为true
+    if (typeof value === 'number') {
+        return value !== 0;
+    }
+
+    // 其他情况返回默认值
+    return defaultValue;
+}
+
+/**
+ * 获取客户端IP地址
+ */
+function getClientIp(req) {
+    // 优先从X-Forwarded-For获取(适用于反向代理场景)
+    const forwarded = req.headers['x-forwarded-for'];
+    if (forwarded) {
+        return typeof forwarded === 'string'
+            ? forwarded.split(',')[0].trim()
+            : forwarded[0].trim();
+    }
+    // 如果没有代理,直接使用connection的remoteAddress
+    return req.connection?.remoteAddress || req.socket?.remoteAddress || req.ip;
+}
+
+// ==================== API路由 ====================
 
 // 应用上报API
 router.post('/', async (req, res) => {
@@ -335,16 +384,31 @@ router.get('/ip', (req, res) => {
     res.json({ ip: clientIp });
 });
 
-function getClientIp(req) {
-    // 优先从X-Forwarded-For获取(适用于反向代理场景)
-    const forwarded = req.headers['x-forwarded-for'];
-    if (forwarded) {
-        return typeof forwarded === 'string'
-            ? forwarded.split(',')[0].trim()
-            : forwarded[0].trim();
+// ==================== 页面组件配置 API（核心修改） ====================
+
+/**
+ * 获取页面组件显示配置
+ */
+router.get('/pageConfig', (req, res) => {
+    try {
+        const config = {
+            WEB_DEVICE_COUNT: parseBoolean(process.env.WEB_DEVICE_COUNT, true),
+            WEB_COMMENT: parseBoolean(process.env.WEB_COMMENT, true),
+            WEB_AI_SUMMARY: parseBoolean(process.env.AI_SUMMARY_ENABLED, true)
+        };
+
+        res.json({
+            success: true,
+            config  // ✅ 所有值都是真正的布尔值
+        });
+    } catch (error) {
+        console.error('获取页面配置错误:', error);
+        res.status(500).json({
+            success: false,
+            message: '获取配置失败',
+            details: error.message
+        });
     }
-    // 如果没有代理,直接使用connection的remoteAddress
-    return req.connection?.remoteAddress || req.socket?.remoteAddress || req.ip;
-}
+});
 
 module.exports = router;

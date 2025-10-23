@@ -247,7 +247,10 @@ router.get('/config', authenticateToken, (req, res) => {
             PUBLISH_API_KEY: process.env.PUBLISH_API_KEY || '未设置',
             DEFAULT_TIMEZONE_OFFSET: process.env.DEFAULT_TIMEZONE_OFFSET || 8,
             AI_SUMMARY_ENABLED: process.env.AI_SUMMARY_ENABLED || 'true',
-            JWT_SECRET_MODE: process.env.JWT_SECRET ? 'static' : 'random_on_restart'
+            JWT_SECRET_MODE: process.env.JWT_SECRET ? 'static' : 'random_on_restart',
+            WEB_DEVICE_COUNT: process.env.WEB_DEVICE_COUNT || true,
+            WEB_COMMENT: process.env.WEB_COMMENT || true,
+            WEB_AI_SUMMARY: process.env.AI_SUMMARY_ENABLED || true
         };
 
         res.json({
@@ -292,7 +295,9 @@ router.post('/config', authenticateToken, async (req, res) => {
             'PUBLISH_API_URL',
             'PUBLISH_API_KEY',
             'DEFAULT_TIMEZONE_OFFSET',
-            'AI_SUMMARY_ENABLED'
+            'AI_SUMMARY_ENABLED',
+            'WEB_DEVICE_COUNT',
+            'WEB_COMMENT'
         ];
 
         const invalidKeys = Object.keys(updates).filter(key => !allowedKeys.includes(key));
