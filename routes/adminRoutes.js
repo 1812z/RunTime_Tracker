@@ -153,7 +153,9 @@ router.post('/account/update', authenticateToken, async (req, res) => {
         // 更新密码（加密后保存）
         if (password) {
             const hashedPassword = await bcrypt.hash(password, 10);
-            envMap.set('ADMIN_PASSWD', hashedPassword);
+            // Docker Compose 需要双美元符号转义
+            const escapedPassword = hashedPassword.replace(/\$/g, '$$$$');
+            envMap.set('ADMIN_PASSWD', escapedPassword);
             process.env.ADMIN_PASSWD = hashedPassword;
             updatedFields.push('密码');
         }
