@@ -3,6 +3,7 @@ name: Build & Push Docker (multi-arch)
 on:
   push:
     tags: [ "v*" ]
+  workflow_dispatch:
 
 permissions:
   contents: read
