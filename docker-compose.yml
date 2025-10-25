@@ -21,9 +21,8 @@ services:
     image: ghcr.io/1812z/runtime_tracker:latest
     restart: unless-stopped
     ports:
-      - "${PORT:-3000}:3000"
+      - "${PORT:-3000}:${PORT:-3000}"
     environment:
-      - PORT=3000
       - MONGODB_URI=${MONGODB_URI:-mongodb://admin:password@mongodb:27017/deviceStats?authSource=admin}
     volumes:
       - ./.env:/app/.env:rw
