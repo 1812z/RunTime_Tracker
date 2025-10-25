@@ -4,6 +4,8 @@ WORKDIR /app
 
 COPY package*.json ./
 
+RUN npm install -g pm2
+
 RUN npm ci --only=production
 
 COPY index.js ./
