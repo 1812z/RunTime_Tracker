@@ -4,8 +4,6 @@ WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm install -g pm2
-
 RUN npm ci --only=production
 
 COPY index.js ./
@@ -21,4 +19,4 @@ USER nextjs
 
 EXPOSE 3000
 
-CMD ["pm2-runtime", "start", "index.js", "--name", "runtime_tracker"]
+CMD ["npx", "pm2-runtime", "start", "index.js", "--name", "runtime_tracker"]
