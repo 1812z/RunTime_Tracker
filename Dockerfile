@@ -19,4 +19,4 @@ USER nextjs
 
 EXPOSE 3000
 
-CMD ["node", "index.js"]
+CMD ["pm2-runtime", "start", "index.js", "--name", "runtime_tracker"]

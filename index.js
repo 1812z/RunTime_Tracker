@@ -10,7 +10,7 @@ const PORT = process.env.PORT || 3000;
 const SECRET = process.env.SECRET || 'default-secret-key';
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/deviceStats';
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
-const ADMIN_PASSWD = process.env.ADMIN_PASSWD?.replace(/\$\$/g, '$') || '';
+const ADMIN_PASSWD = process.env.ADMIN_PASSWD || 'admin';
 
 //运行信息
 console.log('后端端口 ', PORT);
