@@ -354,11 +354,11 @@ router.get('/ai/status', (req, res) => {
     res.json({
         enabled: aiSummary.enabled,
         aiConfigured: !!aiSummary.aiConfig.apiKey,
-        publishConfigured: !!aiSummary.publishConfig.apiUrl,
+        publishEnabled: aiSummary.publishConfig.publishEnabled,
         cronJobsCount: aiSummary.cronJobs.length,
-        schedules: ['0:00', '8:00', '16:00'],
+        schedules: aiSummary.getScheduleStrings(),
         model: aiSummary.aiConfig.model,
-        defaultTimezone: `UTC${aiSummary.defaultTimezoneOffset >= 0 ? '+' : ''}${aiSummary.defaultTimezoneOffset}`
+        defaultTimezone: `UTC${aiSummary.scheduleConfig.timezoneOffset >= 0 ? '+' : ''}${aiSummary.scheduleConfig.timezoneOffset}`
     });
 });
 

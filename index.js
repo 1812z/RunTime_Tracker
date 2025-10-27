@@ -54,10 +54,14 @@ const aiSummary = new AISummary(statsRecorder, statsQuery, {
     publishApiKey: process.env.PUBLISH_API_KEY,
 
     // 默认时区 (东八区)
-    defaultTimezoneOffset: parseInt(process.env.DEFAULT_TIMEZONE_OFFSET) || 8,
+    timezoneOffset: parseInt(process.env.DEFAULT_TIMEZONE_OFFSET) || 8,
 
     // 是否启用定时任务
-    enabled: process.env.AI_SUMMARY_ENABLED !== 'false'
+    enabled: process.env.AI_SUMMARY_ENABLED !== 'false',
+    intervalHours: parseInt(process.env.SCHEDULE_INTERVAL_HOURS) || 4,
+
+    // 发布功能
+    publishEnabled: process.env.PUBLISH_ENABLED !== 'false'
 });
 
 // 导出实例供 apiRoutes 使用

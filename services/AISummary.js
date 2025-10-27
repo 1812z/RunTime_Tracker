@@ -2,6 +2,23 @@
 const cron = require('node-cron');
 
 class AISummary {
+    /**
+     * 获取用户时区的执行时间点列表（格式化字符串）
+     * @returns {string[]} 例如: ['4:00', '8:00', '12:00', '16:00', '20:00']
+     */
+    getScheduleStrings() {
+        try {
+            const scheduleHours = this.generateScheduleHours();
+            return scheduleHours.map(hour => {
+                const h = hour.toString().padStart(2, '0');
+                return `${h}:00`;
+            });
+        } catch (error) {
+            console.error('[AISummary] 获取schedules失败:', error.message);
+            return [];
+        }
+    }
+
     constructor(statsRecorder, statsQuery, config = {}) {
         this.recorder = statsRecorder;
         this.query = statsQuery;
@@ -16,12 +33,28 @@ class AISummary {
 
         // 发布配置
         this.publishConfig = {
+            publishEnabled: config.publishEnabled || process.env.PUBLISH_ENABLED || false,
             apiUrl: config.publishApiUrl || process.env.PUBLISH_API_URL || '',
             apiKey: config.publishApiKey || process.env.PUBLISH_API_KEY || '',
         };
 
-        // 默认时区偏移 (东八区 = +8)
-        this.defaultTimezoneOffset = config.defaultTimezoneOffset || 8;
+        // 定时任务配置
+        this.scheduleConfig = {
+            // 默认时区偏移 (东八区 = +8)
+            timezoneOffset: config.timezoneOffset || parseInt(process.env.DEFAULT_TIMEZONE_OFFSET) || 8,
+
+            // 时间间隔（小时），默认4小时
+            intervalHours: config.intervalHours || parseInt(process.env.SCHEDULE_INTERVAL_HOURS) || 4,
+
+            // 起始时间（小时），默认0点（但不触发）
+            startHour: config.startHour !== undefined ? config.startHour : 0,
+
+            // 结束时间（小时），默认24点
+            endHour: config.endHour !== undefined ? config.endHour : 24,
+
+            // 是否跳过起始时间的触发，默认true
+            skipStartHour: config.skipStartHour !== false
+        };
 
         // 定时任务实例
         this.cronJobs = [];
@@ -30,8 +63,41 @@ class AISummary {
         this.enabled = config.enabled !== false;
 
         // 存储最近的总结结果（内存缓存）
-        // 格式: Map<deviceId, { summary, date, timestamp, stats, trigger }>
         this.recentSummaries = new Map();
+    }
+
+    // 生成执行时间点
+    generateScheduleHours() {
+        const { intervalHours, startHour, endHour, skipStartHour } = this.scheduleConfig;
+
+        // 参数验证
+        if (intervalHours <= 0 || intervalHours > 24) {
+            throw new Error('intervalHours must be between 1 and 24');
+        }
+
+        if (startHour < 0 || startHour >= 24) {
+            throw new Error('startHour must be between 0 and 23');
+        }
+
+        if (endHour <= startHour || endHour > 24) {
+            throw new Error('endHour must be greater than startHour and not exceed 24');
+        }
+
+        const scheduleHours = [];
+        let currentHour = startHour + intervalHours; // 从起始时间后的第一个间隔开始
+
+        // 如果不跳过起始时间，则添加起始时间
+        if (!skipStartHour) {
+            scheduleHours.push(startHour);
+        }
+
+        // 生成后续时间点
+        while (currentHour < endHour) {
+            scheduleHours.push(currentHour);
+            currentHour += intervalHours;
+        }
+
+        return scheduleHours;
     }
 
     // 启动定时任务
@@ -46,35 +112,63 @@ class AISummary {
             return;
         }
 
-        // 计算用户时区对应的UTC时间
-        // 每4小时执行一次: 0点, 4点, 8点, 12点, 16点, 20点
-        const offset = this.defaultTimezoneOffset;
+        try {
+            const scheduleHours = this.generateScheduleHours();
+            const offset = this.scheduleConfig.timezoneOffset;
 
-        // 将用户时区的0, 4, 8, 12, 16, 20点转换为UTC时间
-        const schedules = [
-            { userHour: 0, utcHour: (24 + 0 - offset) % 24 },
-            { userHour: 4, utcHour: (24 + 4 - offset) % 24 },
-            { userHour: 8, utcHour: (24 + 8 - offset) % 24 },
-            { userHour: 12, utcHour: (24 + 12 - offset) % 24 },
-            { userHour: 16, utcHour: (24 + 16 - offset) % 24 },
-            { userHour: 20, utcHour: (24 + 20 - offset) % 24 },
-        ];
+            console.log('[AISummary] 定时任务配置:');
+            console.log(`  - 用户时区: UTC${offset >= 0 ? '+' : ''}${offset}`);
+            console.log(`  - 时间间隔: 每${this.scheduleConfig.intervalHours}小时`);
+            console.log(`  - 起始时间: ${this.scheduleConfig.startHour}:00 (${this.scheduleConfig.skipStartHour ? '不触发' : '触发'})`);
+            console.log(`  - 结束时间: ${this.scheduleConfig.endHour}:00`);
+            console.log(`  - 执行时间点: ${scheduleHours.map(h => `${h}:00`).join('、')}`);
 
-        schedules.forEach(({ userHour, utcHour }) => {
-            const cronTime = `0 ${utcHour} * * *`;
-            const triggerType = `cron-${userHour}`;
-            const job = cron.schedule(cronTime, async () => {
-                console.log(`[AISummary] 定时任务触发 (用户时区${userHour}点 = UTC ${utcHour}点)`);
-                await this.runDailySummaryForAllDevices(triggerType);
+            // 为每个时间点创建定时任务
+            scheduleHours.forEach(userHour => {
+                // 将用户时区时间转换为UTC时间
+                const utcHour = (userHour - offset + 24) % 24;
+                const cronTime = `0 ${utcHour} * * *`;
+                const triggerType = `cron-${userHour}`;
+
+                const job = cron.schedule(cronTime, async () => {
+                    console.log(`[AISummary] 定时任务触发 (用户时区 ${userHour}:00 = UTC ${utcHour}:00)`);
+                    await this.runDailySummaryForAllDevices(triggerType);
+                });
+
+                this.cronJobs.push(job);
+                console.log(`  ✓ 已创建定时任务: 用户时区 ${userHour}:00 (UTC ${utcHour}:00) - cron: ${cronTime}`);
             });
 
-            this.cronJobs.push(job);
-        });
+            console.log(`[AISummary] 定时任务已启动，共 ${this.cronJobs.length} 个任务`);
 
-        console.log(`[AISummary] 定时任务已启动 (每4小时执行一次)`);
-        console.log(`[AISummary] 用户时区: UTC${offset >= 0 ? '+' : ''}${offset}`);
-        console.log(`[AISummary] 执行时间: 用户时区 0、4、8、12、16、20点`);
-        console.log(`[AISummary] UTC时间: ${schedules.map(s => s.utcHour + ':00').join('、')}`);
+        } catch (error) {
+            console.error('[AISummary] 定时任务启动失败:', error.message);
+            throw error;
+        }
+    }
+
+    // 获取当前定时任务配置信息
+    getScheduleInfo() {
+        try {
+            const scheduleHours = this.generateScheduleHours();
+            const offset = this.scheduleConfig.timezoneOffset;
+
+            return {
+                enabled: this.enabled,
+                timezoneOffset: offset,
+                intervalHours: this.scheduleConfig.intervalHours,
+                startHour: this.scheduleConfig.startHour,
+                endHour: this.scheduleConfig.endHour,
+                skipStartHour: this.scheduleConfig.skipStartHour,
+                scheduleHours: scheduleHours,
+                utcHours: scheduleHours.map(h => (24 + h - offset) % 24),
+                activeJobs: this.cronJobs.length
+            };
+        } catch (error) {
+            return {
+                error: error.message
+            };
+        }
     }
 
     // 停止定时任务
@@ -295,7 +389,7 @@ class AISummary {
 
     // 发布总结到指定API
     async publishSummary(deviceId, date, summary, statsData) {
-        if (!this.publishConfig.apiUrl) {
+        if (!this.publishConfig.apiUrl || !this.publishConfig.publishEnabled){
             console.log('[AISummary] 未配置发布API，跳过发布');
             return { published: false, reason: 'No publish API configured' };
         }
