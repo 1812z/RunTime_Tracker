@@ -29,6 +29,7 @@ class AISummary {
             apiKey: config.aiApiKey || process.env.AI_API_KEY || '',
             model: config.aiModel || process.env.AI_MODEL || 'gpt-4',
             maxTokens: config.aiMaxTokens || 1000,
+            timezoneOffset: config.timezoneOffset || parseInt(process.env.DEFAULT_TIMEZONE_OFFSET) || 8,
         };
 
         // 发布配置
@@ -40,9 +41,6 @@ class AISummary {
 
         // 定时任务配置
         this.scheduleConfig = {
-            // 默认时区偏移 (东八区 = +8)
-            timezoneOffset: config.timezoneOffset || parseInt(process.env.DEFAULT_TIMEZONE_OFFSET) || 8,
-
             // 时间间隔（小时），默认4小时
             intervalHours: config.intervalHours || parseInt(process.env.SCHEDULE_INTERVAL_HOURS) || 4,
 
@@ -114,7 +112,7 @@ class AISummary {
 
         try {
             const scheduleHours = this.generateScheduleHours();
-            const offset = this.scheduleConfig.timezoneOffset;
+            const offset = this.aiConfig.timezoneOffset;
 
             console.log('[AISummary] 定时任务配置:');
             console.log(`  - 用户时区: UTC${offset >= 0 ? '+' : ''}${offset}`);
@@ -147,31 +145,7 @@ class AISummary {
         }
     }
 
-    // 获取当前定时任务配置信息
-    getScheduleInfo() {
-        try {
-            const scheduleHours = this.generateScheduleHours();
-            const offset = this.scheduleConfig.timezoneOffset;
-
-            return {
-                enabled: this.enabled,
-                timezoneOffset: offset,
-                intervalHours: this.scheduleConfig.intervalHours,
-                startHour: this.scheduleConfig.startHour,
-                endHour: this.scheduleConfig.endHour,
-                skipStartHour: this.scheduleConfig.skipStartHour,
-                scheduleHours: scheduleHours,
-                utcHours: scheduleHours.map(h => (24 + h - offset) % 24),
-                activeJobs: this.cronJobs.length
-            };
-        } catch (error) {
-            return {
-                error: error.message
-            };
-        }
-    }
-
-    // 停止定时任务
+// 停止定时任务
     stop() {
         this.cronJobs.forEach(job => job.stop());
         this.cronJobs = [];
@@ -200,7 +174,7 @@ class AISummary {
 
     // 生成每日总结 (对外接口)
     async generateDailySummary(deviceId, date = null, timezoneOffset = null, trigger = 'manual') {
-        const tz = timezoneOffset !== null ? timezoneOffset : this.defaultTimezoneOffset;
+        const tz = timezoneOffset !== null ? timezoneOffset : this.aiConfig.timezoneOffset;
 
         // 如果没有指定日期，使用当天的数据（考虑时区）
         let targetDate;
