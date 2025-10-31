@@ -75,8 +75,10 @@ aiSummary.start();
 // API路由
 const apiRoutes = require('./routes/apiRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const eyeapiRoutes = require('./routes/EyeTime_Routes');
 app.use('/admin', adminRoutes);
 app.use('/api', apiRoutes);
+app.use('/api', eyeapiRoutes);
 
 // 启动服务器
 app.listen(PORT, '0.0.0.0', () => {

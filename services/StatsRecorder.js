@@ -1,5 +1,7 @@
 // StatsRecorder.js - 记录信息模块
 const { mongoose } = require('../index');
+const EyeTimeRecorder = require('./EyeTimeRecorder');
+const eyeTimeRecorder = new EyeTimeRecorder();
 
 // 定义新的数据模型 - 按天/小时/应用存储
 const DailyStat = mongoose.model('DailyStat', {
@@ -44,6 +46,8 @@ class StatsRecorder {
     // 记录应用使用时间
     async recordUsage(deviceId, appName, running) {
         const now = new Date();
+
+        await eyeTimeRecorder.recordActivity(deviceId, running) // 记录公共使用时间（用眼时长）
 
         if (!this.recentAppSwitches.has(deviceId)) {
             this.recentAppSwitches.set(deviceId, []);

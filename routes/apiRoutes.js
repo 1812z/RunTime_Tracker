@@ -162,111 +162,78 @@ router.get('/recent/:deviceId', async (req, res) => {
     }
 });
 
-// 获取当天统计数据
+// 获取当天统计数据（支持全部设备）
 router.get('/stats/:deviceId', async (req, res) => {
     try {
-        // 获取时区偏移,默认为0 (UTC)
         const timezoneOffset = parseInt(req.query.timezoneOffset) || 0;
         if (timezoneOffset < -12 || timezoneOffset > 12) {
-            return res.status(400).json({
-                error: 'Invalid timezoneOffset. Must be between -12 and +12 (UTC-12 to UTC+12).',
-            });
+            return res.status(400).json({ error: 'Invalid timezoneOffset.' });
         }
-        // 获取日期参数,如果没有则默认为当天
         let date;
         if (req.query.date) {
             date = new Date(req.query.date);
             if (isNaN(date.getTime())) {
-                return res.status(400).json({
-                    error: 'Invalid date format. Please use YYYY-MM-DD format.'
-                });
+                return res.status(400).json({ error: 'Invalid date format.' });
             }
-        }
-        else {
+        } else {
             date = new Date();
         }
         date.setHours(0, 0, 0, 0);
-        const stats = await statsQuery.getDailyStats(req.params.deviceId, date, timezoneOffset);
+
+        const deviceId = req.params.deviceId;
+        let stats;
+        if (deviceId === 'summary') {
+            stats = await statsQuery.getDailyStatsForAllDevices(date, timezoneOffset);
+        } else {
+            stats = await statsQuery.getDailyStats(deviceId, date, timezoneOffset);
+        }
         if (!stats) {
-            return res.status(404).json({
-                error: 'No records found for this date'
-            });
+            return res.status(404).json({ error: 'No records found for this date' });
         }
         res.json(stats);
     } catch (error) {
         console.error('Error in /api/stats/:deviceId:', error);
-        res.status(500).json({
-            error: 'Database error',
-            details: error.message
-        });
+        res.status(500).json({ error: 'Database error', details: error.message });
     }
 });
 
-// 获取周统计数据 (7天内某个应用的每日使用时间)
+// 获取周统计数据（支持全部设备）
 router.get('/weekly/:deviceId', async (req, res) => {
     try {
-        // 获取时区偏移,默认为0 (UTC)
         const timezoneOffset = parseInt(req.query.timezoneOffset) || 0;
-        if (timezoneOffset < -12 || timezoneOffset > 12) {
-            return res.status(400).json({
-                error: 'Invalid timezoneOffset. Must be between -12 and +12 (UTC-12 to UTC+12).',
-            });
-        }
-
-        // 获取周偏移参数: 0=本周, -1=上周, -2=上上周, 1=下周 (一般不用)
         const weekOffset = parseInt(req.query.weekOffset) || 0;
-
-        // 获取应用名称 (可选)
         const appName = req.query.appName || null;
-
-        const stats = await statsQuery.getWeeklyAppStats(
-            req.params.deviceId,
-            appName,
-            weekOffset,
-            timezoneOffset
-        );
-
+        const deviceId = req.params.deviceId;
+        let stats;
+        if (deviceId === 'summary') {
+            stats = await statsQuery.getWeeklyAppStatsForAllDevices(appName, weekOffset, timezoneOffset);
+        } else {
+            stats = await statsQuery.getWeeklyAppStats(deviceId, appName, weekOffset, timezoneOffset);
+        }
         res.json(stats);
     } catch (error) {
         console.error('Error in /api/weekly/:deviceId:', error);
-        res.status(500).json({
-            error: 'Database error',
-            details: error.message
-        });
+        res.status(500).json({ error: 'Database error', details: error.message });
     }
 });
 
-// 获取月统计数据 (整月内某个应用的每日使用时间)
+// 获取月统计数据（支持全部设备）
 router.get('/monthly/:deviceId', async (req, res) => {
     try {
-        // 获取时区偏移,默认为0 (UTC)
         const timezoneOffset = parseInt(req.query.timezoneOffset) || 0;
-        if (timezoneOffset < -12 || timezoneOffset > 12) {
-            return res.status(400).json({
-                error: 'Invalid timezoneOffset. Must be between -12 and +12 (UTC-12 to UTC+12).',
-            });
-        }
-
-        // 获取月偏移参数: 0=本月, -1=上月, -2=上上月, 1=下月 (一般不用)
         const monthOffset = parseInt(req.query.monthOffset) || 0;
-
-        // 获取应用名称 (可选)
         const appName = req.query.appName || null;
-
-        const stats = await statsQuery.getMonthlyAppStats(
-            req.params.deviceId,
-            appName,
-            monthOffset,
-            timezoneOffset
-        );
-
+        const deviceId = req.params.deviceId;
+        let stats;
+        if (deviceId === 'summary') {
+            stats = await statsQuery.getMonthlyAppStatsForAllDevices(appName, monthOffset, timezoneOffset);
+        } else {
+            stats = await statsQuery.getMonthlyAppStats(deviceId, appName, monthOffset, timezoneOffset);
+        }
         res.json(stats);
     } catch (error) {
         console.error('Error in /api/monthly/:deviceId:', error);
-        res.status(500).json({
-            error: 'Database error',
-            details: error.message
-        });
+        res.status(500).json({ error: 'Database error', details: error.message });
     }
 });
 
