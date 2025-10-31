@@ -213,7 +213,7 @@ class AISummary {
             summary: aiSummary,
             date: targetDate.toISOString().split('T')[0],
             timestamp: new Date().toISOString(),
-            trigger: trigger, // 'manual', 'cron-0', 'cron-4', 'cron-8', 'cron-12', 'cron-16', 'cron-20'
+            trigger: trigger, // 'manual', 'cron-x'
             publishResult
         };
 
@@ -327,7 +327,7 @@ class AISummary {
             .sort((a, b) => b.minutes - a.minutes);
 
         // 构建提示词
-        let prompt = `总结以下设备的应用使用情况\n\n`;
+        let prompt = `总结以下设备的应用使用情况，控制在300字以内\n\n`;
 
         prompt += `- 设备ID: ${deviceId}\n`;
         prompt += `- 统计日期: ${date}\n\n`;
@@ -348,23 +348,23 @@ class AISummary {
             const status = running ? '打开' : '关闭';
             prompt += `- ${time} ${status} ${appName}\n`;
         });
-        prompt += `请用以下风格输出报告：
+        prompt += `以下是自定义风格，请你遵守：
             1. 以"杂鱼~杂鱼♥"开头
             2. 称呼用户为"大哥哥"或"杂鱼哥哥"
             3. 使用波浪号和爱心符号(♥)
             4. 加入"不会吧不会吧"等语气词
             5. 对使用习惯进行毒舌但可爱的吐槽
-            6. 控制在300字以内
+            6. 适当使用emoji表情
             7. 可以适当加入"诶嘿~"、"噗噗"等语气词`;
-        prompt += `注意：适当使用emoji表情，控制在300字以内，不要返回md格式，只能换行`;
+        prompt += `注意：控制在300字以内，不要返回md格式，只能换行`;
 
         return prompt;
     }
 
     // 发布总结到指定API
     async publishSummary(deviceId, date, summary, statsData) {
-        if (!this.publishConfig.apiUrl || !this.publishConfig.publishEnabled){
-            console.log('[AISummary] 未配置发布API，跳过发布');
+        if (!this.publishConfig.apiUrl || this.publishConfig.publishEnabled){
+            console.log('[AISummary] 未配置发布功能，跳过发布');
             return { published: false, reason: 'No publish API configured' };
         }
 
