@@ -165,31 +165,32 @@ router.get('/recent/:deviceId', async (req, res) => {
 // 获取当天统计数据（支持全部设备）
 router.get('/stats/:deviceId', async (req, res) => {
     try {
-        const timezoneOffset = parseInt(req.query.timezoneOffset) || 0;
-        if (timezoneOffset < -12 || timezoneOffset > 12) {
-            return res.status(400).json({ error: 'Invalid timezoneOffset.' });
-        }
+        // 解析日期参数（如果有的话）
         let date;
         if (req.query.date) {
-            date = new Date(req.query.date);
-            if (isNaN(date.getTime())) {
-                return res.status(400).json({ error: 'Invalid date format.' });
-            }
+            // 支持 YYYY-MM-DD 格式或完整日期字符串
+            date = req.query.date;
         } else {
             date = new Date();
         }
-        date.setHours(0, 0, 0, 0);
 
         const deviceId = req.params.deviceId;
         let stats;
         if (deviceId === 'summary') {
-            stats = await statsQuery.getDailyStatsForAllDevices(date, timezoneOffset);
+            stats = await statsQuery.getDailyStatsForAllDevices(date);
         } else {
-            stats = await statsQuery.getDailyStats(deviceId, date, timezoneOffset);
+            stats = await statsQuery.getDailyStats(deviceId, date);
         }
-        if (!stats) {
-            return res.status(404).json({ error: 'No records found for this date' });
+
+        if (!stats || stats.totalUsage === 0) {
+            return res.json({
+                totalUsage: 0,
+                appStats: {},
+                hourlyStats: Array(24).fill(0),
+                appHourlyStats: {}
+            });
         }
+
         res.json(stats);
     } catch (error) {
         console.error('Error in /api/stats/:deviceId:', error);
@@ -197,19 +198,20 @@ router.get('/stats/:deviceId', async (req, res) => {
     }
 });
 
-// 获取周统计数据（支持全部设备）
+// 获取周统计数据（支持全部设备）- 后端处理时区
 router.get('/weekly/:deviceId', async (req, res) => {
     try {
-        const timezoneOffset = parseInt(req.query.timezoneOffset) || 0;
         const weekOffset = parseInt(req.query.weekOffset) || 0;
         const appName = req.query.appName || null;
         const deviceId = req.params.deviceId;
+
         let stats;
         if (deviceId === 'summary') {
-            stats = await statsQuery.getWeeklyAppStatsForAllDevices(appName, weekOffset, timezoneOffset);
+            stats = await statsQuery.getWeeklyAppStatsForAllDevices(appName, weekOffset);
         } else {
-            stats = await statsQuery.getWeeklyAppStats(deviceId, appName, weekOffset, timezoneOffset);
+            stats = await statsQuery.getWeeklyAppStats(deviceId, appName, weekOffset);
         }
+
         res.json(stats);
     } catch (error) {
         console.error('Error in /api/weekly/:deviceId:', error);
@@ -217,19 +219,20 @@ router.get('/weekly/:deviceId', async (req, res) => {
     }
 });
 
-// 获取月统计数据（支持全部设备）
+// 获取月统计数据（支持全部设备）- 后端处理时区
 router.get('/monthly/:deviceId', async (req, res) => {
     try {
-        const timezoneOffset = parseInt(req.query.timezoneOffset) || 0;
         const monthOffset = parseInt(req.query.monthOffset) || 0;
         const appName = req.query.appName || null;
         const deviceId = req.params.deviceId;
+
         let stats;
         if (deviceId === 'summary') {
-            stats = await statsQuery.getMonthlyAppStatsForAllDevices(appName, monthOffset, timezoneOffset);
+            stats = await statsQuery.getMonthlyAppStatsForAllDevices(appName, monthOffset);
         } else {
-            stats = await statsQuery.getMonthlyAppStats(deviceId, appName, monthOffset, timezoneOffset);
+            stats = await statsQuery.getMonthlyAppStats(deviceId, appName, monthOffset);
         }
+
         res.json(stats);
     } catch (error) {
         console.error('Error in /api/monthly/:deviceId:', error);
@@ -290,7 +293,7 @@ router.get('/ai/summaries', (req, res) => {
 router.get('/ai/trigger/:deviceId', async (req, res) => {
     try {
         // 验证secret
-        const { secret, date, timezoneOffset } = req.query;
+        const { secret, date } = req.query;
 
         if (!secret || secret !== SECRET) {
             return res.status(401).json({
@@ -302,8 +305,7 @@ router.get('/ai/trigger/:deviceId', async (req, res) => {
         const deviceId = req.params.deviceId;
 
         const result = await aiSummary.triggerSummary(deviceId, {
-            date: date || null,
-            timezoneOffset: timezoneOffset ? parseInt(timezoneOffset) : null
+            date: date || null
         });
 
         res.json(result);
@@ -351,7 +353,7 @@ router.get('/ip', (req, res) => {
     res.json({ ip: clientIp });
 });
 
-// ==================== 页面组件配置 API（核心修改） ====================
+// ==================== 页面组件配置 API ====================
 
 /**
  * 获取页面组件显示配置
@@ -366,7 +368,7 @@ router.get('/pageConfig', (req, res) => {
 
         res.json({
             success: true,
-            config  // ✅ 所有值都是真正的布尔值
+            config
         });
     } catch (error) {
         console.error('获取页面配置错误:', error);

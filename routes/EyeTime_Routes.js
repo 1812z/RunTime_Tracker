@@ -1,21 +1,18 @@
+// routes/EyeTime_Routes.js
 const express = require('express');
 const router = express.Router();
 const EyeTimeQuery = require('../services/EyeTimeQuery');
 const eyeTimeQuery = new EyeTimeQuery();
 
-// 查询某日用眼统计(总分钟数+小时分布)
+/**
+ * 查询某日用眼统计 (总分钟数 + 小时分布)
+ * GET /eyetime/daily?date=YYYY-MM-DD
+ */
 router.get('/eyetime/daily', async (req, res) => {
     try {
-        const timezoneOffset = parseInt(req.query.timezoneOffset) || 0;
-        if (timezoneOffset < -12 || timezoneOffset > 12) {
-            return res.status(400).json({
-                error: 'Invalid timezoneOffset. Must be between -12 and +12 (UTC-12 to UTC+12).',
-            });
-        }
-
         let date;
+
         if (req.query.date) {
-            // 用户传入的是用户时区的日期字符串 YYYY-MM-DD
             const dateStr = req.query.date;
             const [year, month, day] = dateStr.split('-').map(Number);
 
@@ -25,7 +22,7 @@ router.get('/eyetime/daily', async (req, res) => {
                 });
             }
 
-            // 创建UTC的中午12点(避免日期边界问题)
+            // 使用 UTC 中午 12 点，避免时区边界错误
             date = new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
 
             if (isNaN(date.getTime())) {
@@ -34,12 +31,10 @@ router.get('/eyetime/daily', async (req, res) => {
                 });
             }
         } else {
-            // 如果没有传date,使用当前UTC时间
-            date = new Date();
+            date = new Date(); // 默认当前日期
         }
 
-        const stats = await eyeTimeQuery.getDailyMinutes(date, timezoneOffset);
-
+        const stats = await eyeTimeQuery.getDailyMinutes(date);
         res.json(stats);
     } catch (error) {
         console.error('Error in /eyetime/daily:', error);
@@ -47,18 +42,14 @@ router.get('/eyetime/daily', async (req, res) => {
     }
 });
 
-// 查询某周用眼统计(每日总分钟数)
+/**
+ * 查询某周用眼统计 (每日总分钟数)
+ * GET /eyetime/weekly?weekOffset=0
+ */
 router.get('/eyetime/weekly', async (req, res) => {
     try {
-        const timezoneOffset = parseInt(req.query.timezoneOffset) || 0;
-        if (timezoneOffset < -12 || timezoneOffset > 12) {
-            return res.status(400).json({
-                error: 'Invalid timezoneOffset. Must be between -12 and +12 (UTC-12 to UTC+12).',
-            });
-        }
-
         const weekOffset = parseInt(req.query.weekOffset) || 0;
-        const stats = await eyeTimeQuery.getWeeklyMinutes(weekOffset, timezoneOffset);
+        const stats = await eyeTimeQuery.getWeeklyMinutes(weekOffset);
         res.json(stats);
     } catch (error) {
         console.error('Error in /eyetime/weekly:', error);
@@ -66,18 +57,14 @@ router.get('/eyetime/weekly', async (req, res) => {
     }
 });
 
-// 查询某月用眼统计(每日总分钟数)
+/**
+ * 查询某月用眼统计 (每日总分钟数)
+ * GET /eyetime/monthly?monthOffset=0
+ */
 router.get('/eyetime/monthly', async (req, res) => {
     try {
-        const timezoneOffset = parseInt(req.query.timezoneOffset) || 0;
-        if (timezoneOffset < -12 || timezoneOffset > 12) {
-            return res.status(400).json({
-                error: 'Invalid timezoneOffset. Must be between -12 and +12 (UTC-12 to UTC+12).',
-            });
-        }
-
         const monthOffset = parseInt(req.query.monthOffset) || 0;
-        const stats = await eyeTimeQuery.getMonthlyMinutes(monthOffset, timezoneOffset);
+        const stats = await eyeTimeQuery.getMonthlyMinutes(monthOffset);
         res.json(stats);
     } catch (error) {
         console.error('Error in /eyetime/monthly:', error);

@@ -3,12 +3,7 @@ const { mongoose } = require('../index');
 const EyeTimeRecorder = require('./EyeTimeRecorder');
 const TimezoneUtils = require('../utils/timezone'); // 引入时区工具
 
-const eyeTimeRecorder = new EyeTimeRecorder();
-
-// 假设从 index.js 中读取时区配置
-// 你需要在实际代码中从配置文件或 index.js 中导入这个值
-// 例如: const { timezoneOffset } = require('../config');
-// 这里我们先创建一个默认的，你需要替换成实际的
+let eyeTimeRecorder;
 let timezoneUtils;
 
 // 定义新的数据模型 - 按天/小时/应用存储
@@ -23,7 +18,7 @@ class StatsRecorder {
     constructor(timezoneConfig = 8) {
         // 初始化时区工具（接收时区偏移或时区名称）
         timezoneUtils = new TimezoneUtils(timezoneConfig);
-
+        eyeTimeRecorder = new EyeTimeRecorder({timezoneOffset: timezoneConfig});
         // 设备应用切换记录
         this.recentAppSwitches = new Map(); // {deviceId: [{appName, timestamp}]}
         // 电池信息存储
@@ -131,12 +126,6 @@ class StatsRecorder {
 
         // 转换回 UTC（这样存储的就是本地零点对应的 UTC 时间）
         return timezoneUtils.localToUtc(localDayStart);
-    }
-
-    // 获取本地时区的小时数
-    getLocalHour(timestamp) {
-        const localTime = timezoneUtils.utcToLocal(new Date(timestamp));
-        return localTime.getUTCHours();
     }
 
     // 更新每日统计

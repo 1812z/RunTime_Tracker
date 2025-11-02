@@ -46,11 +46,16 @@
         .refresh:hover {
             background: #2c5fb3;
         }
+        .version {
+            font-size: 0.8rem;
+            color: #999;
+        }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="label">当前设备数</div>
+    <div class="version">Version: v0.6.0</div>
     <div class="count" id="deviceCount">0</div>
     <button class="refresh" onclick="fetchDeviceCount()">刷新数据</button>
 </div>

@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 
 const app = express();
+const HOST = process.env.HOST || '0.0.0.0';
 const PORT = process.env.PORT || 3000;
 const SECRET = process.env.SECRET || 'default-secret-key';
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/deviceStats';
@@ -38,8 +39,10 @@ const StatsQuery = require('./services/StatsQuery');
 const AISummary = require('./services/AISummary');
 
 // 创建实例
-const statsRecorder = new StatsRecorder();
-const statsQuery = new StatsQuery(statsRecorder);
+const statsRecorder = new StatsRecorder(parseInt(process.env.DEFAULT_TIMEZONE_OFFSET) || 8);
+const statsQuery = new StatsQuery(statsRecorder,{
+    timezoneOffset: parseInt(process.env.DEFAULT_TIMEZONE_OFFSET) || 8
+});
 
 // 创建AI总结实例并配置
 const aiSummary = new AISummary(statsRecorder, statsQuery, {
@@ -81,12 +84,12 @@ app.use('/api', apiRoutes);
 app.use('/api', eyeapiRoutes);
 
 // 启动服务器
-app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://0.0.0.0:${PORT}`);
-    console.log('AI Summary 功能:', aiSummary.enabled ? '已启用' : '已禁用');
+app.listen(PORT, HOST, () => {
+    console.log(`Server running on http://${HOST}:${PORT}`);
+    console.log('[AI Summary]:', aiSummary.enabled ? '已启用' : '已禁用');
     if (aiSummary.enabled && aiSummary.aiConfig.apiKey) {
-        console.log('AI 定时任务: 每天 0点、8点、16点 执行');
+        console.log('[AI Summary]定时任务: 已启用');
     } else if (aiSummary.enabled && !aiSummary.aiConfig.apiKey) {
-        console.log('警告: AI_API_KEY 未配置，AI功能无法正常工作');
+        console.log('[AI Summary]警告: AI_API_KEY 未配置，AI功能无法正常工作');
     }
 });
