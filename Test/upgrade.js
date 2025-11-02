@@ -1,5 +1,5 @@
 // migrate_timezone_v3.js - 正确的时区迁移（移动hourlyUsage数据）
-const { mongoose } = require('./index');
+const { mongoose } = require('../index');
 const readline = require('readline');
 
 const TIMEZONE_OFFSET = 8;

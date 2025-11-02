@@ -1,5 +1,5 @@
 // fix_date_add_one_day.js - 将所有记录的日期加1天
-const { mongoose } = require('./index');
+const { mongoose } = require('../index');
 const readline = require('readline');
 
 const rl = readline.createInterface({
