@@ -1,25 +1,36 @@
 // StatsRecorder.js - 记录信息模块
 const { mongoose } = require('../index');
 const EyeTimeRecorder = require('./EyeTimeRecorder');
+const TimezoneUtils = require('../utils/timezone'); // 引入时区工具
+
 const eyeTimeRecorder = new EyeTimeRecorder();
+
+// 假设从 index.js 中读取时区配置
+// 你需要在实际代码中从配置文件或 index.js 中导入这个值
+// 例如: const { timezoneOffset } = require('../config');
+// 这里我们先创建一个默认的，你需要替换成实际的
+let timezoneUtils;
 
 // 定义新的数据模型 - 按天/小时/应用存储
 const DailyStat = mongoose.model('DailyStat', {
     deviceId: String,
-    date: Date,       // 日期部分 (YYYY-MM-DD)
+    date: Date,       // 本地时区日期零点 (存储为该时区零点的 UTC 时间戳)
     appName: String,
     hourlyUsage: [Number] // 24小时数组,每项代表分钟数
 });
 
 class StatsRecorder {
-    constructor() {
+    constructor(timezoneConfig = 8) {
+        // 初始化时区工具（接收时区偏移或时区名称）
+        timezoneUtils = new TimezoneUtils(timezoneConfig);
+
         // 设备应用切换记录
         this.recentAppSwitches = new Map(); // {deviceId: [{appName, timestamp}]}
         // 电池信息存储
         this.batteryInfo = new Map(); // {deviceId: {level, isCharging, timestamp}}
     }
 
-// 记录电池信息和充电状态
+    // 记录电池信息和充电状态
     recordBattery(deviceId, level, isCharging = false) {
         const now = new Date();
 
@@ -105,13 +116,34 @@ class StatsRecorder {
         return Math.round(minutes * 100) / 100;
     }
 
+    // 获取本地时区的日期零点（返回该零点对应的 UTC Date 对象）
+    getLocalDayStart(timestamp) {
+        // 将 UTC 时间转换为本地时间
+        const localTime = timezoneUtils.utcToLocal(new Date(timestamp));
+
+        // 获取本地时间的日期部分
+        const year = localTime.getUTCFullYear();
+        const month = localTime.getUTCMonth();
+        const day = localTime.getUTCDate();
+
+        // 创建本地零点时间
+        const localDayStart = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+
+        // 转换回 UTC（这样存储的就是本地零点对应的 UTC 时间）
+        return timezoneUtils.localToUtc(localDayStart);
+    }
+
+    // 获取本地时区的小时数
+    getLocalHour(timestamp) {
+        const localTime = timezoneUtils.utcToLocal(new Date(timestamp));
+        return localTime.getUTCHours();
+    }
+
     // 更新每日统计
     async updateDailyStat(deviceId, appName, startTimestamp, durationMinutes) {
-        const startDate = new Date(startTimestamp);
-        const dayStart = new Date(startDate);
-        dayStart.setHours(0, 0, 0, 0);
+        // 使用本地时区的日期零点
+        const dayStart = this.getLocalDayStart(startTimestamp);
 
-        // 查找或创建统计记录
         let stat = await DailyStat.findOne({
             deviceId,
             date: dayStart,
@@ -127,9 +159,7 @@ class StatsRecorder {
             });
         }
 
-        // 传递完整的开始时间戳和持续时间
         await this.distributePreciseMinutes(stat, startTimestamp, durationMinutes);
-
         await stat.save();
     }
 
@@ -138,33 +168,35 @@ class StatsRecorder {
         let currentTimestamp = new Date(startTimestamp);
 
         while (remainingMinutes > 0) {
-            const currentDate = new Date(currentTimestamp);
-            currentDate.setHours(0, 0, 0, 0);
+            // 获取当前时间戳对应的本地日期零点
+            const currentDayStart = this.getLocalDayStart(currentTimestamp);
 
-            const currentHour = currentTimestamp.getHours();
-            const currentMinute = currentTimestamp.getMinutes();
-            const currentSecond = currentTimestamp.getSeconds();
+            // 获取本地时区的小时、分钟、秒
+            const localTime = timezoneUtils.utcToLocal(currentTimestamp);
+            const currentHour = localTime.getUTCHours();
+            const currentMinute = localTime.getUTCMinutes();
+            const currentSecond = localTime.getUTCSeconds();
 
             // 如果跨日期了,需要获取新的统计记录
             let currentStat = stat;
-            if (currentDate.getTime() !== stat.date.getTime()) {
+            if (currentDayStart.getTime() !== stat.date.getTime()) {
                 currentStat = await DailyStat.findOne({
                     deviceId: stat.deviceId,
-                    date: currentDate,
+                    date: currentDayStart,
                     appName: stat.appName
                 });
 
                 if (!currentStat) {
                     currentStat = new DailyStat({
                         deviceId: stat.deviceId,
-                        date: new Date(currentDate),
+                        date: currentDayStart,
                         appName: stat.appName,
                         hourlyUsage: Array(24).fill(0)
                     });
                 }
             }
 
-            // 计算当前小时内已使用的分钟数(从小时开始到当前分钟)
+            // 计算当前小时内已使用的分钟数
             const usedInCurrentHour = currentStat.hourlyUsage[currentHour];
 
             // 计算当前时间点到下一个小时开始还有多少分钟
@@ -173,7 +205,7 @@ class StatsRecorder {
             // 当前小时的剩余容量
             const availableSpace = Math.max(0, 60 - usedInCurrentHour);
 
-            // 实际能在当前小时分配的时间:取剩余时间、到下一小时的时间、可用空间的最小值
+            // 实际能在当前小时分配的时间
             const minutesToAdd = Math.min(remainingMinutes, minutesToNextHour, availableSpace);
 
             if (minutesToAdd > 0) {
@@ -191,7 +223,7 @@ class StatsRecorder {
             // 移动到下一个时间点
             if (minutesToAdd >= minutesToNextHour) {
                 // 移动到下一个小时的开始
-                currentTimestamp.setHours(currentHour + 1, 0, 0, 0);
+                currentTimestamp = new Date(currentTimestamp.getTime() + minutesToNextHour * 60 * 1000);
             } else {
                 // 在当前小时内完成了分配
                 break;
