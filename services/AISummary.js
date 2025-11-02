@@ -1,5 +1,6 @@
 // AISummary.js - AI总结模块
 const cron = require('node-cron');
+const {config} = require("dotenv");
 
 class AISummary {
     /**
@@ -30,6 +31,7 @@ class AISummary {
             model: config.aiModel || process.env.AI_MODEL || 'gpt-4',
             maxTokens: config.aiMaxTokens || 1000,
             timezoneOffset: config.timezoneOffset || parseInt(process.env.DEFAULT_TIMEZONE_OFFSET) || 8,
+            aiPrompt: config.aiPrompt || '无',
         };
 
         // 发布配置
@@ -287,7 +289,7 @@ class AISummary {
                     messages: [
                         {
                             role: 'system',
-                            content: '你是一个以杂鱼风格的分析师'
+                            content: '你是一个时间分析师'
                         },
                         {
                             role: 'user',
@@ -348,14 +350,7 @@ class AISummary {
             const status = running ? '打开' : '关闭';
             prompt += `- ${time} ${status} ${appName}\n`;
         });
-        prompt += `以下是自定义风格，请你遵守：
-            1. 以"杂鱼~杂鱼♥"开头
-            2. 称呼用户为"大哥哥"或"杂鱼哥哥"
-            3. 使用波浪号和爱心符号(♥)
-            4. 加入"不会吧不会吧"等语气词
-            5. 对使用习惯进行毒舌但可爱的吐槽
-            6. 适当使用emoji表情
-            7. 可以适当加入"诶嘿~"、"噗噗"等语气词`;
+        prompt += this.aiConfig.aiPrompt;
         prompt += `注意：控制在300字以内，不要返回md格式，只能换行`;
 
         return prompt;

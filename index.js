@@ -64,7 +64,9 @@ const aiSummary = new AISummary(statsRecorder, statsQuery, {
     intervalHours: parseInt(process.env.SCHEDULE_INTERVAL_HOURS) || 4,
 
     // 发布功能
-    publishEnabled: process.env.PUBLISH_ENABLED !== 'false'
+    publishEnabled: process.env.PUBLISH_ENABLED !== 'false',
+
+    aiPrompt:  process.env.AI_PROMPT?.replace(/\\n/g, '\n')
 });
 
 // 导出实例供 apiRoutes 使用
