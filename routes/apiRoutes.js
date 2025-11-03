@@ -366,9 +366,12 @@ router.get('/pageConfig', (req, res) => {
             WEB_AI_SUMMARY: parseBoolean(process.env.AI_SUMMARY_ENABLED, true)
         };
 
+        const tzOffset = parseInt(process.env.DEFAULT_TIMEZONE_OFFSET ?? '8')
+
         res.json({
             success: true,
-            config
+            config,
+            tzOffset
         });
     } catch (error) {
         console.error('获取页面配置错误:', error);
