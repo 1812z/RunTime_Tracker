@@ -104,7 +104,78 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// 新增：更新管理员账户
+// 解析 .env 文件的值
+const parseEnvValue = (value) => {
+    if (!value) return value;
+
+    const trimmed = value.trim();
+
+    // 如果值被双引号包裹，去掉引号并处理转义字符
+    if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+        return trimmed
+            .slice(1, -1)  // 去掉首尾的引号
+            .replace(/\\"/g, '"')  // 反转义双引号
+            .replace(/\\\\/g, '\\');  // 反转义反斜杠
+    }
+
+    return trimmed;
+};
+
+// 读取并解析 .env 文件
+const readEnvFile = (envPath) => {
+    const fs = require('fs');
+
+    let envContent = '';
+    if (fs.existsSync(envPath)) {
+        envContent = fs.readFileSync(envPath, 'utf8');
+    }
+
+    const envLines = envContent.split('\n');
+    const envMap = new Map();
+
+    envLines.forEach(line => {
+        const trimmedLine = line.trim();
+        if (trimmedLine && !trimmedLine.startsWith('#')) {
+            const separatorIndex = trimmedLine.indexOf('=');
+            if (separatorIndex > 0) {
+                const key = trimmedLine.substring(0, separatorIndex).trim();
+                const rawValue = trimmedLine.substring(separatorIndex + 1);
+                const value = parseEnvValue(rawValue);
+                envMap.set(key, value);
+            }
+        }
+    });
+
+    return envMap;
+};
+
+// 格式化 .env 文件的值（需要时添加引号）
+const formatEnvValue = (value) => {
+    if (value === null || value === undefined) {
+        return '';
+    }
+
+    const strValue = String(value);
+
+    // 如果值包含空格、换行、#号等特殊字符，需要用双引号包裹
+    if (strValue.includes(' ') ||
+        strValue.includes('\n') ||
+        strValue.includes('\r') ||
+        strValue.includes('\t') ||
+        strValue.includes('#') ||
+        strValue.startsWith('"') ||
+        strValue.endsWith('"')) {
+        // 转义内部的双引号和反斜杠
+        const escaped = strValue
+            .replace(/\\/g, '\\\\')  // 转义反斜杠
+            .replace(/"/g, '\\"');   // 转义双引号
+        return `"${escaped}"`;
+    }
+
+    return strValue;
+};
+
+// 更新管理员账户
 router.post('/account/update', authenticateToken, async (req, res) => {
     try {
         const fs = require('fs');
@@ -121,25 +192,7 @@ router.post('/account/update', authenticateToken, async (req, res) => {
         }
 
         // 读取现有的 .env 文件
-        let envContent = '';
-        if (fs.existsSync(envPath)) {
-            envContent = fs.readFileSync(envPath, 'utf8');
-        }
-
-        const envLines = envContent.split('\n');
-        const envMap = new Map();
-
-        envLines.forEach(line => {
-            const trimmedLine = line.trim();
-            if (trimmedLine && !trimmedLine.startsWith('#')) {
-                const separatorIndex = trimmedLine.indexOf('=');
-                if (separatorIndex > 0) {
-                    const key = trimmedLine.substring(0, separatorIndex).trim();
-                    const value = trimmedLine.substring(separatorIndex + 1).trim();
-                    envMap.set(key, value);
-                }
-            }
-        });
+        const envMap = readEnvFile(envPath);
 
         const updatedFields = [];
 
@@ -162,7 +215,7 @@ router.post('/account/update', authenticateToken, async (req, res) => {
 
         // 生成新的 .env 内容
         const newEnvContent = Array.from(envMap.entries())
-            .map(([key, value]) => `${key}=${value}`)
+            .map(([key, value]) => `${key}=${formatEnvValue(value)}`)
             .join('\n');
 
         // 写入 .env 文件
@@ -312,25 +365,8 @@ router.post('/config', authenticateToken, async (req, res) => {
             });
         }
 
-        let envContent = '';
-        if (fs.existsSync(envPath)) {
-            envContent = fs.readFileSync(envPath, 'utf8');
-        }
-
-        const envLines = envContent.split('\n');
-        const envMap = new Map();
-
-        envLines.forEach(line => {
-            const trimmedLine = line.trim();
-            if (trimmedLine && !trimmedLine.startsWith('#')) {
-                const separatorIndex = trimmedLine.indexOf('=');
-                if (separatorIndex > 0) {
-                    const key = trimmedLine.substring(0, separatorIndex).trim();
-                    const value = trimmedLine.substring(separatorIndex + 1).trim();
-                    envMap.set(key, value);
-                }
-            }
-        });
+        // 读取现有的 .env 文件
+        const envMap = readEnvFile(envPath);
 
         const updatedKeys = [];
         for (const [key, value] of Object.entries(updates)) {
@@ -339,8 +375,9 @@ router.post('/config', authenticateToken, async (req, res) => {
             process.env[key] = value;
         }
 
+        // 生成新的 .env 内容
         const newEnvContent = Array.from(envMap.entries())
-            .map(([key, value]) => `${key}=${value}`)
+            .map(([key, value]) => `${key}=${formatEnvValue(value)}`)
             .join('\n');
 
         fs.writeFileSync(envPath, newEnvContent + '\n', 'utf8');
