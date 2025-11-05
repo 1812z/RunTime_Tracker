@@ -307,6 +307,16 @@ router.get('/config', authenticateToken, (req, res) => {
             JWT_SECRET_MODE: process.env.JWT_SECRET ? 'static' : 'random_on_restart',
             WEB_DEVICE_COUNT: process.env.WEB_DEVICE_COUNT || true,
             WEB_COMMENT: process.env.WEB_COMMENT || true,
+            GISCUS_REPO: process.env.GISCUS_REPO || "",
+            GISCUS_REPOID: process.env.GISCUS_REPOID || "",
+            GISCUS_CATEGORY: process.env.GISCUS_CATEGORY || "",
+            GISCUS_CATEGORYID: process.env.GISCUS_CATEGORYID || "",
+            GISCUS_MAPPING: process.env.GISCUS_MAPPING || "",
+            GISCUS_REACTIONSENABLED: process.env.GISCUS_REACTIONSENABLED || "",
+            GISCUS_EMITMETADATA: process.env.GISCUS_EMITMETADATA || "",
+            GISCUS_INPUTPOSITION: process.env.GISCUS_INPUTPOSITION || "",
+            GISCUS_THEME: process.env.GISCUS_THEME || "",
+            GISCUS_LANG: process.env.GISCUS_LANG || ""
         };
 
         res.json({
@@ -354,7 +364,17 @@ router.post('/config', authenticateToken, async (req, res) => {
             'DEFAULT_TIMEZONE_OFFSET',
             'AI_SUMMARY_ENABLED',
             'WEB_DEVICE_COUNT',
-            'WEB_COMMENT'
+            'WEB_COMMENT',
+            'GISCUS_REPO',
+            'GISCUS_REPOID',
+            'GISCUS_CATEGORY',
+            'GISCUS_CATEGORYID',
+            'GISCUS_MAPPING',
+            'GISCUS_REACTIONSENABLED',
+            'GISCUS_EMITMETADATA',
+            'GISCUS_INPUTPOSITION',
+            'GISCUS_THEME',
+            'GISCUS_LANG'
         ];
 
         const invalidKeys = Object.keys(updates).filter(key => !allowedKeys.includes(key));

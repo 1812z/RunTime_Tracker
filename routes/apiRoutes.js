@@ -363,7 +363,17 @@ router.get('/pageConfig', (req, res) => {
         const config = {
             WEB_DEVICE_COUNT: parseBoolean(process.env.WEB_DEVICE_COUNT, true),
             WEB_COMMENT: parseBoolean(process.env.WEB_COMMENT, true),
-            WEB_AI_SUMMARY: parseBoolean(process.env.AI_SUMMARY_ENABLED, true)
+            WEB_AI_SUMMARY: parseBoolean(process.env.AI_SUMMARY_ENABLED, true),
+            GISCUS_REPO: process.env.GISCUS_REPO || '',
+            GISCUS_REPOID: process.env.GISCUS_REPOID || '',
+            GISCUS_CATEGORY: process.env.GISCUS_CATEGORY || '',
+            GISCUS_CATEGORYID: process.env.GISCUS_CATEGORYID || '',
+            GISCUS_MAPPING: process.env.GISCUS_MAPPING || 'pathname',
+            GISCUS_REACTIONSENABLED: parseBoolean(process.env.GISCUS_REACTIONSENABLED, true),
+            GISCUS_EMITMETADATA: parseBoolean(process.env.GISCUS_EMITMETADATA, false),
+            GISCUS_INPUTPOSITION: process.env.GISCUS_INPUTPOSITION || 'bottom',
+            GISCUS_THEME: process.env.GISCUS_THEME || 'light',
+            GISCUS_LANG: process.env.GISCUS_LANG || 'zh-CN'
         };
 
         const tzOffset = parseInt(process.env.DEFAULT_TIMEZONE_OFFSET ?? '8')
