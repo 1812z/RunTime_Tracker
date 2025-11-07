@@ -40,6 +40,7 @@
 - 地址：[https://github.com/1812z/Runtime_Tracker_Admin](https://github.com/1812z/Runtime_Tracker_Admin)
 - 说明：基于 Vue.js 的 Web 界面，用于连接到后端API以管理后台
 - CF托管在线配置(仅支持Https)： [点击即用](https://runtime-tracker-admin.pages.dev/login)
+- **暂不支持配置热重载，修改后需要点击右上角重启**
 
 ### Github嵌入图  
 [![我的~~娱乐~~开发设备](https://device-svg-generator.2023158207.workers.dev/devices-svg?api=https://api-usage.1812z.top/api/devices)]()
