@@ -2,7 +2,11 @@
 const express = require('express');
 const router = express.Router();
 const EyeTimeQuery = require('../services/EyeTimeQuery');
+const TimezoneUtils = require('../utils/timezone');
+
 const eyeTimeQuery = new EyeTimeQuery();
+const defaultTimezoneOffset = parseInt(process.env.DEFAULT_TIMEZONE_OFFSET) || 8;
+const tzUtils = new TimezoneUtils(defaultTimezoneOffset);
 
 /**
  * 查询某日用眼统计 (总分钟数 + 小时分布)
@@ -13,28 +17,20 @@ router.get('/eyetime/daily', async (req, res) => {
         let date;
 
         if (req.query.date) {
-            const dateStr = req.query.date;
-            const [year, month, day] = dateStr.split('-').map(Number);
-
-            if (!year || !month || !day) {
-                return res.status(400).json({
-                    error: 'Invalid date format. Please use YYYY-MM-DD format.'
-                });
-            }
-
-            // 使用 UTC 中午 12 点，避免时区边界错误
-            date = new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
-
-            if (isNaN(date.getTime())) {
+            // 使用 TimezoneUtils 正确解析本地日期
+            try {
+                date = tzUtils.parseDate(req.query.date);
+            } catch (e) {
                 return res.status(400).json({
                     error: 'Invalid date format. Please use YYYY-MM-DD format.'
                 });
             }
         } else {
-            date = new Date(); // 默认当前日期
+            // 默认当前日期
+            date = tzUtils.getTodayInLocal();
         }
 
-        const stats = await eyeTimeQuery.getDailyMinutes(date);
+        const stats = await eyeTimeQuery.getDailyMinutes(date, defaultTimezoneOffset);
         res.json(stats);
     } catch (error) {
         console.error('Error in /eyetime/daily:', error);
@@ -49,7 +45,7 @@ router.get('/eyetime/daily', async (req, res) => {
 router.get('/eyetime/weekly', async (req, res) => {
     try {
         const weekOffset = parseInt(req.query.weekOffset) || 0;
-        const stats = await eyeTimeQuery.getWeeklyMinutes(weekOffset);
+        const stats = await eyeTimeQuery.getWeeklyMinutes(weekOffset, defaultTimezoneOffset);
         res.json(stats);
     } catch (error) {
         console.error('Error in /eyetime/weekly:', error);
@@ -64,7 +60,7 @@ router.get('/eyetime/weekly', async (req, res) => {
 router.get('/eyetime/monthly', async (req, res) => {
     try {
         const monthOffset = parseInt(req.query.monthOffset) || 0;
-        const stats = await eyeTimeQuery.getMonthlyMinutes(monthOffset);
+        const stats = await eyeTimeQuery.getMonthlyMinutes(monthOffset, defaultTimezoneOffset);
         res.json(stats);
     } catch (error) {
         console.error('Error in /eyetime/monthly:', error);
