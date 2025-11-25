@@ -1,16 +1,16 @@
-// EyeTimeRecorder.js - 支持本地时区的用眼时间记录
+// EyeTimeRecorder.js
 const { mongoose } = require('../index');
 const TimezoneUtils = require('../utils/timezone');
 
 const DailyEyeTime = mongoose.model('DailyEyeTime', {
-    date: Date,           // 本地时区日期零点 (存储为该时区零点的 UTC 时间戳，如+8时区是2025-11-01T16:00:00.000Z)
+    date: Date,           // 本地时区日期零点对应的 UTC 时间戳
     hourlyUsage: [Number] // 24小时数组,每项代表分钟数
 });
 
 class EyeTimeRecorder {
     constructor(timezoneConfig) {
         // 初始化时区工具
-        this.timezoneUtils = new TimezoneUtils(timezoneConfig.timezoneOffset  || 'Asia/Shanghai');
+        this.timezoneUtils = new TimezoneUtils(timezoneConfig.timezoneOffset || 'Asia/Shanghai');
 
         // 存储所有设备的状态
         this.deviceStates = new Map(); // { deviceId: { isActive: boolean, lastUpdateTime: timestamp } }
@@ -106,11 +106,12 @@ class EyeTimeRecorder {
             const segmentDurationMs = segmentEnd - currentTime;
             const minutes = segmentDurationMs / (60 * 1000);
 
-            // 获取本地日期（零点）
-            const localDateOnly = this.timezoneUtils.getLocalDateOnly(currentTime);
+            // 获取本地时区零点的正确 UTC 时间
+            // 例如：北京时间 2025-11-24 -> UTC 2025-11-23T16:00Z
+            const localDayStartUtc = this.timezoneUtils.getLocalDayStart(new Date(currentTime));
 
             segments.push({
-                date: localDateOnly, // UTC时间戳，表示本地时区的零点
+                date: localDayStartUtc,  // 存储为本地时区零点对应的 UTC 时间
                 hour: currentHour,
                 minutes: minutes
             });
@@ -133,7 +134,7 @@ class EyeTimeRecorder {
             if (!record) {
                 // 创建新记录，初始化24小时数组为0
                 record = new DailyEyeTime({
-                    date: date,
+                    date: date,  // 存储为本地时区零点的 UTC 时间
                     hourlyUsage: Array(24).fill(0)
                 });
             }
