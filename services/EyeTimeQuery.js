@@ -21,13 +21,21 @@ class EyeTimeQuery {
     async getDailyMinutes(date, timezoneOffset = this.timezoneOffset) {
         const tzUtils = new TimezoneUtils(timezoneOffset);
 
-        // 获取本地当天起止时间（转换为 UTC）
-        const localStart = tzUtils.getLocalDayStart(date);
-        const nextDayStart = new Date(localStart.getTime() + 24 * 60 * 60 * 1000);
+        // 解析输入日期为本地日期
+        const localDate = tzUtils.parseDate(date);
+
+        // 构建数据库查询的日期（本地零点对应的 UTC 时间）
+        const localDayStart = new Date(Date.UTC(
+            localDate.getUTCFullYear(),
+            localDate.getUTCMonth(),
+            localDate.getUTCDate(),
+            0, 0, 0, 0
+        ));
+        const dbDate = tzUtils.localToUtc(localDayStart);
 
         // 查询记录
         const dayRecords = await DailyEyeTime.find({
-            date: { $gte: localStart, $lt: nextDayStart }
+            date: dbDate
         }).lean();
 
         // 初始化小时分布
@@ -44,10 +52,8 @@ class EyeTimeQuery {
         // 总分钟数直接用小时分布求和
         const totalUsage = Math.round(hourlyStats.reduce((a, b) => a + b, 0) * 100) / 100;
 
-        const userDate = tzUtils.utcToLocal(localStart);
-
         return {
-            date: userDate.toISOString().split('T')[0],
+            date: localDate.toISOString().split('T')[0],
             totalUsage,
             hourlyStats: hourlyStats.map(v => Math.round(v * 100) / 100),
             timezoneOffset

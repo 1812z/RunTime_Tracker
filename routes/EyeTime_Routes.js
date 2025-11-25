@@ -11,7 +11,6 @@ const eyeTimeQuery = new EyeTimeQuery();
 router.get('/eyetime/daily', async (req, res) => {
     try {
         let date;
-
         if (req.query.date) {
             const dateStr = req.query.date;
             const [year, month, day] = dateStr.split('-').map(Number);
@@ -22,8 +21,7 @@ router.get('/eyetime/daily', async (req, res) => {
                 });
             }
 
-            // 使用 UTC 中午 12 点，避免时区边界错误
-            date = new Date(Date.UTC(year, month - 1, day, 12, 0, 0, 0));
+            date = new Date();
 
             if (isNaN(date.getTime())) {
                 return res.status(400).json({
