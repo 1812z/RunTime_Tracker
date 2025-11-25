@@ -369,6 +369,7 @@ router.get('/pageConfig', (req, res) => {
             WEB_DEVICE_COUNT: parseBoolean(process.env.WEB_DEVICE_COUNT, true),
             WEB_COMMENT: parseBoolean(process.env.WEB_COMMENT, true),
             WEB_AI_SUMMARY: parseBoolean(process.env.AI_SUMMARY_ENABLED, true),
+            WEB_SUMMARY: parseBoolean(process.env.WEB_SUMMARY, true),
             GISCUS_REPO: process.env.GISCUS_REPO || '',
             GISCUS_REPOID: process.env.GISCUS_REPOID || '',
             GISCUS_CATEGORY: process.env.GISCUS_CATEGORY || '',
