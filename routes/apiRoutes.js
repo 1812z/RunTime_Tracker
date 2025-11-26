@@ -188,7 +188,7 @@ router.get('/stats/:deviceId', async (req, res) => {
         let date;
         if (req.query.date) {
             // 支持 YYYY-MM-DD 格式或完整日期字符串
-            date = req.query.date;
+            date = new Date(req.query.date);
             if (isNaN(date.getTime())) {
                 return res.status(400).json({
                     error: 'Invalid date format. Please use YYYY-MM-DD format.'
