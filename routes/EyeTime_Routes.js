@@ -12,16 +12,7 @@ router.get('/eyetime/daily', async (req, res) => {
     try {
         let date;
         if (req.query.date) {
-            const dateStr = req.query.date;
-            const [year, month, day] = dateStr.split('-').map(Number);
-
-            if (!year || !month || !day) {
-                return res.status(400).json({
-                    error: 'Invalid date format. Please use YYYY-MM-DD format.'
-                });
-            }
-
-            date = new Date();
+            date = new Date(req.query.date);
 
             if (isNaN(date.getTime())) {
                 return res.status(400).json({
