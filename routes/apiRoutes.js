@@ -37,6 +37,18 @@ function parseBoolean(value, defaultValue = false) {
 }
 
 /**
+ * 检查是否允许访问汇总数据
+ * @param {string} deviceId - 设备ID
+ * @returns {boolean} 是否允许访问
+ */
+function isSummaryAllowed(deviceId) {
+    if (deviceId !== 'summary') {
+        return true;
+    }
+    return parseBoolean(process.env.WEB_SUMMARY);
+}
+
+/**
  * 获取客户端IP地址
  */
 function getClientIp(req) {
@@ -165,6 +177,13 @@ router.get('/recent/:deviceId', async (req, res) => {
 // 获取当天统计数据（支持全部设备）
 router.get('/stats/:deviceId', async (req, res) => {
     try {
+        const deviceId = req.params.deviceId;
+
+        // 检查是否允许访问汇总数据
+        if (!isSummaryAllowed(deviceId)) {
+            return res.status(403).json({ error: 'Summary is disabled' });
+        }
+
         // 解析日期参数（如果有的话）
         let date;
         if (req.query.date) {
@@ -179,7 +198,6 @@ router.get('/stats/:deviceId', async (req, res) => {
             date = new Date();
         }
 
-        const deviceId = req.params.deviceId;
         let stats;
         if (deviceId === 'summary') {
             stats = await statsQuery.getDailyStatsForAllDevices(date);
@@ -206,9 +224,15 @@ router.get('/stats/:deviceId', async (req, res) => {
 // 获取周统计数据（支持全部设备）- 后端处理时区
 router.get('/weekly/:deviceId', async (req, res) => {
     try {
+        const deviceId = req.params.deviceId;
+
+        // 检查是否允许访问汇总数据
+        if (!isSummaryAllowed(deviceId)) {
+            return res.status(403).json({ error: 'Summary is disabled' });
+        }
+
         const weekOffset = parseInt(req.query.weekOffset) || 0;
         const appName = req.query.appName || null;
-        const deviceId = req.params.deviceId;
 
         let stats;
         if (deviceId === 'summary') {
@@ -227,9 +251,15 @@ router.get('/weekly/:deviceId', async (req, res) => {
 // 获取月统计数据（支持全部设备）- 后端处理时区
 router.get('/monthly/:deviceId', async (req, res) => {
     try {
+        const deviceId = req.params.deviceId;
+
+        // 检查是否允许访问汇总数据
+        if (!isSummaryAllowed(deviceId)) {
+            return res.status(403).json({ error: 'Summary is disabled' });
+        }
+
         const monthOffset = parseInt(req.query.monthOffset) || 0;
         const appName = req.query.appName || null;
-        const deviceId = req.params.deviceId;
 
         let stats;
         if (deviceId === 'summary') {
