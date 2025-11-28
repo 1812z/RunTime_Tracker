@@ -407,8 +407,7 @@ router.post('/config', authenticateToken, async (req, res) => {
         res.json({
             success: true,
             message: '配置已更新',
-            updatedKeys,
-            notice: '部分配置需要重启服务才能生效'
+            details: '部分配置需要重启服务才能生效'
         });
 
     } catch (error) {
