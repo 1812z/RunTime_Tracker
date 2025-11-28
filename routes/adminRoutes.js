@@ -383,7 +383,7 @@ router.post('/config', authenticateToken, async (req, res) => {
         if (invalidKeys.length > 0) {
             return res.status(400).json({
                 success: false,
-                message: `不允许修改的配置项: ${invalidKeys.join(', ')}，管理员账户请使用专用接口修改`
+                message: `不允许修改的配置项: ${invalidKeys.join(', ')}，如需修改请手动编辑后端.env配置文件`
             });
         }
 
