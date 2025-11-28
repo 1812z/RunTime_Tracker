@@ -427,9 +427,8 @@ router.post('/restart', authenticateToken, (req, res) => {
 
     res.json({
         success: true,
-        message: '服务重启指令已发送，将在1秒后执行重启',
-        notice: '重启后所有用户需要重新登录',
-        restartStatus: 'pending'
+        message: '服务将在1秒后重启',
+        details: '重启后所有用户需要重新登录',
     });
 
     setTimeout(() => {
