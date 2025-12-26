@@ -44,7 +44,10 @@ class AISummary {
         // 定时任务配置
         this.scheduleConfig = {
             // 时间间隔（小时），默认4小时
-            intervalHours: config.intervalHours || parseInt(process.env.SCHEDULE_INTERVAL_HOURS) || 4,
+            // 设置为 0 表示仅启用手动触发，不创建定时任务
+            intervalHours: config.intervalHours !== undefined
+                ? config.intervalHours
+                : (parseInt(process.env.SCHEDULE_INTERVAL_HOURS) || 4),
 
             // 起始时间（小时），默认0点（但不触发）
             startHour: config.startHour !== undefined ? config.startHour : 0,
@@ -70,9 +73,14 @@ class AISummary {
     generateScheduleHours() {
         const { intervalHours, startHour, endHour, skipStartHour } = this.scheduleConfig;
 
+        // 当 intervalHours 为 0 时，返回空数组（仅支持手动触发）
+        if (intervalHours === 0) {
+            return [];
+        }
+
         // 参数验证
-        if (intervalHours <= 0 || intervalHours > 24) {
-            throw new Error('intervalHours must be between 1 and 24');
+        if (intervalHours < 0 || intervalHours > 24) {
+            throw new Error('intervalHours must be between 0 and 24');
         }
 
         if (startHour < 0 || startHour >= 24) {
@@ -115,6 +123,15 @@ class AISummary {
         try {
             const scheduleHours = this.generateScheduleHours();
             const offset = this.aiConfig.timezoneOffset;
+
+            // 当 intervalHours 为 0 时，不创建定时任务
+            if (this.scheduleConfig.intervalHours === 0) {
+                console.log('[AISummary] 定时任务配置:');
+                console.log(`  - 模式: 仅手动触发`);
+                console.log(`  - 用户时区: UTC${offset >= 0 ? '+' : ''}${offset}`);
+                console.log(`  - 自动定时任务: 已禁用 (intervalHours=0)`);
+                return;
+            }
 
             console.log('[AISummary] 定时任务配置:');
             console.log(`  - 用户时区: UTC${offset >= 0 ? '+' : ''}${offset}`);
