@@ -11,6 +11,7 @@ const DailyStat = mongoose.model('DailyStat', {
     deviceId: String,
     date: Date,       // 本地时区日期零点 (存储为该时区零点的 UTC 时间戳)
     appName: String,
+    packageName: String, // 应用包名（可选）
     hourlyUsage: [Number] // 24小时数组,每项代表分钟数
 });
 
@@ -50,7 +51,7 @@ class StatsRecorder {
     }
 
     // 记录应用使用时间
-    async recordUsage(deviceId, appName, running) {
+    async recordUsage(deviceId, appName, running, packageName = null) {
         const now = new Date();
 
         await eyeTimeRecorder.recordActivity(deviceId, running) // 记录公共使用时间（用眼时长）
@@ -67,14 +68,15 @@ class StatsRecorder {
                 const lastSwitch = deviceSwitches[0];
                 if (lastSwitch.running !== false) {
                     const minutesSinceLastSwitch = this.calculatePreciseMinutes(lastSwitch.timestamp, now);
-                    // 更新应用分时段时间统计,传递完整的开始时间戳
-                    await this.updateDailyStat(deviceId, lastSwitch.appName, lastSwitch.timestamp, minutesSinceLastSwitch);
+                    // 更新应用分时段时间统计,传递完整的开始时间戳和包名
+                    await this.updateDailyStat(deviceId, lastSwitch.appName, lastSwitch.timestamp, minutesSinceLastSwitch, lastSwitch.packageName);
                 }
                 deviceSwitches[0].running = false;
                 deviceSwitches.unshift({
                     appName: "设备待机",
                     timestamp: now,
-                    running: false
+                    running: false,
+                    packageName: null
                 });
             }
             return;
@@ -86,8 +88,8 @@ class StatsRecorder {
             const lastSwitch = deviceSwitches[0];
             if (lastSwitch.running !== false) {
                 minutesSinceLastSwitch = this.calculatePreciseMinutes(lastSwitch.timestamp, now);
-                // 关键修改:传递完整的开始时间戳
-                await this.updateDailyStat(deviceId, lastSwitch.appName, lastSwitch.timestamp, minutesSinceLastSwitch);
+                // 传递完整的开始时间戳和包名
+                await this.updateDailyStat(deviceId, lastSwitch.appName, lastSwitch.timestamp, minutesSinceLastSwitch, lastSwitch.packageName);
             }
         }
 
@@ -95,7 +97,8 @@ class StatsRecorder {
         deviceSwitches.unshift({
             appName: appName,
             timestamp: now,
-            running: true
+            running: true,
+            packageName: packageName
         });
 
         if (deviceSwitches.length > 20) {
@@ -129,14 +132,15 @@ class StatsRecorder {
     }
 
     // 更新每日统计
-    async updateDailyStat(deviceId, appName, startTimestamp, durationMinutes) {
+    async updateDailyStat(deviceId, appName, startTimestamp, durationMinutes, packageName = null) {
         // 使用本地时区的日期零点
         const dayStart = this.getLocalDayStart(startTimestamp);
 
         let stat = await DailyStat.findOne({
             deviceId,
             date: dayStart,
-            appName
+            appName,
+            packageName
         });
 
         if (!stat) {
@@ -144,6 +148,7 @@ class StatsRecorder {
                 deviceId,
                 date: dayStart,
                 appName,
+                packageName,
                 hourlyUsage: Array(24).fill(0)
             });
         }
@@ -172,7 +177,8 @@ class StatsRecorder {
                 currentStat = await DailyStat.findOne({
                     deviceId: stat.deviceId,
                     date: currentDayStart,
-                    appName: stat.appName
+                    appName: stat.appName,
+                    packageName: stat.packageName
                 });
 
                 if (!currentStat) {
@@ -180,6 +186,7 @@ class StatsRecorder {
                         deviceId: stat.deviceId,
                         date: currentDayStart,
                         appName: stat.appName,
+                        packageName: stat.packageName,
                         hourlyUsage: Array(24).fill(0)
                     });
                 }

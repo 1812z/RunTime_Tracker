@@ -226,6 +226,7 @@ class StatsQuery {
     async getDevices() {
         return Array.from(this.recorder.recentAppSwitches.keys()).map(deviceId => {
             let currentApp = "Unknown";
+            let currentPackageName = null;
             let runningSince = new Date();
             let isRunning = true;
             const batteryInfo = this.recorder.getLatestBatteryInfo(deviceId);
@@ -233,6 +234,7 @@ class StatsQuery {
             if (this.recorder.recentAppSwitches.has(deviceId) && this.recorder.recentAppSwitches.get(deviceId).length > 0) {
                 const lastSwitch = this.recorder.recentAppSwitches.get(deviceId)[0];
                 currentApp = lastSwitch.appName;
+                currentPackageName = lastSwitch.packageName;
                 runningSince = lastSwitch.timestamp;
                 isRunning = lastSwitch.running !== false;
             }
@@ -240,6 +242,7 @@ class StatsQuery {
             return {
                 device: deviceId,
                 currentApp,
+                currentPackageName,
                 running: isRunning,
                 runningSince,
                 batteryLevel: batteryInfo.level,

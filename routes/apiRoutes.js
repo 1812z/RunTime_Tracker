@@ -67,7 +67,7 @@ function getClientIp(req) {
 
 // 应用上报API
 router.post('/', async (req, res) => {
-    const { secret, device, app_name, running, batteryLevel, isCharging } = req.body;
+    const { secret, device, app_name, running, batteryLevel, isCharging, package_name } = req.body;
 
     if (secret !== SECRET) {
         return res.status(401).json({ error: 'Invalid secret' });
@@ -93,7 +93,7 @@ router.post('/', async (req, res) => {
                 });
             }
 
-            await statsRecorder.recordUsage(device, app_name, running);
+            await statsRecorder.recordUsage(device, app_name, running, package_name);
         }
 
         // 返回成功响应
@@ -129,6 +129,7 @@ router.get('/recentall', (req, res) => {
         statsRecorder.recentAppSwitches.forEach((switches, deviceId) => {
             allRecords[deviceId] = switches.map(entry => ({
                 appName: entry.appName,
+                packageName: entry.packageName,
                 timestamp: entry.timestamp,
                 running: entry.running !== false
             }));
@@ -156,6 +157,7 @@ router.get('/recent/:deviceId', async (req, res) => {
             // 转换为所需格式
             records = switchEntries.map(entry => ({
                 appName: entry.appName,
+                packageName: entry.packageName,
                 timestamp: entry.timestamp,
                 running: entry.running !== false
             }));
