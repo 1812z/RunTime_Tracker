@@ -24,6 +24,8 @@ services:
       - "${PORT:-3000}:${PORT:-3000}"
     environment:
       - MONGODB_URI=${MONGODB_URI:-mongodb://admin:password@mongodb:27017/deviceStats?authSource=admin}
+      - ADMIN_USER=${ADMIN_USER}
+      - ADMIN_PASSWD=${ADMIN_PASSWD}
     volumes:
       - ./.env:/app/.env:rw
     depends_on:
