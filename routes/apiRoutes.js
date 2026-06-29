@@ -67,7 +67,7 @@ function getClientIp(req) {
 
 // 应用上报API
 router.post('/', async (req, res) => {
-    const { secret, device, app_name, running, batteryLevel, isCharging, package_name } = req.body;
+    const { secret, device, app_name, running, batteryLevel, isCharging, package_name } = req.body || {};
 
     if (secret !== SECRET) {
         return res.status(401).json({ error: 'Invalid secret' });
